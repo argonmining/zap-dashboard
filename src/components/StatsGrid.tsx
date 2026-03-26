@@ -1,5 +1,5 @@
 import { type AuctionParams, type AuctionState, EXPLORER_URL, SOLD_SUPPLY, REQUIRED_RAISE_IKAS } from '../contracts';
-import { fromQ96Price, fromWei, fromRawTokens, fmtNum, fmtPrice, fmtBlocks } from '../format';
+import { fromQ96Price, fromQ96Amount, fromWei, fromRawTokens, fmtNum, fmtPrice, fmtBlocks } from '../format';
 
 type Props = {
   params: AuctionParams | null;
@@ -46,6 +46,7 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
   const clearingPrice = fromQ96Price(state.checkpoint.clearingPrice);
   const floorPrice = fromQ96Price(params.floorPrice);
   const maxBidPrice = fromQ96Price(params.maxBidPrice);
+  const maxBidPriceCapped = maxBidPrice > 1_000_000;
   const tickSpacing = fromQ96Price(params.tickSpacing);
   const currencyRaised = fromWei(state.currencyRaised);
   const totalCleared = fromRawTokens(state.totalCleared);
@@ -63,7 +64,13 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
 
   const fundingPct = (currencyRaised / REQUIRED_RAISE_IKAS) * 100;
   const supplyPct = totalSupply > 0 ? (totalCleared / totalSupply) * 100 : 0;
-  const demandAboveClearing = fromQ96Price(state.sumCurrencyDemandAboveClearingQ96);
+  const demandAboveClearing = fromQ96Amount(state.sumCurrencyDemandAboveClearingQ96);
+
+  const activeBids = state.bids.filter(b => b.isFullyAboveClearing).length;
+  const uniqueBidders = new Set(state.bids.map(b => b.bid.owner)).size;
+  const avgPrice = state.bids.length > 0
+    ? state.bids.reduce((sum, b) => sum + fromQ96Price(b.bid.maxPrice), 0) / state.bids.length
+    : 0;
 
   const clearingUsd = kasPrice ? clearingPrice * kasPrice : null;
 
@@ -104,7 +111,7 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
         <div className="rounded-xl bg-gray-900 border border-gray-800 p-4">
           <div className="flex justify-between text-xs text-gray-500 mb-2">
             <span>Funding Progress</span>
-            <span>{fmtNum(fundingPct, 1)}%</span>
+            <span>{fundingPct < 1 ? fundingPct.toFixed(2) : fmtNum(fundingPct, 1)}%</span>
           </div>
           <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
             <div
@@ -120,7 +127,7 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
         <div className="rounded-xl bg-gray-900 border border-gray-800 p-4">
           <div className="flex justify-between text-xs text-gray-500 mb-2">
             <span>Supply Cleared</span>
-            <span>{fmtNum(supplyPct, 1)}%</span>
+            <span>{supplyPct < 1 ? supplyPct.toFixed(4) : fmtNum(supplyPct, 1)}%</span>
           </div>
           <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
             <div
@@ -149,11 +156,12 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
         />
         <Stat
           label="Max Bid Price"
-          value={`${fmtPrice(maxBidPrice)} iKAS`}
+          value={maxBidPriceCapped ? 'Uncapped' : `${fmtPrice(maxBidPrice)} iKAS`}
+          sub={maxBidPriceCapped ? 'No upper price limit' : undefined}
         />
         <Stat
           label="Tick Spacing"
-          value={fmtPrice(tickSpacing)}
+          value={`${tickSpacing.toFixed(4)} iKAS`}
         />
         <Stat
           label="Currency Raised"
@@ -163,16 +171,17 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
         <Stat
           label="Graduated"
           value={state.isGraduated ? 'Yes' : 'No'}
-          sub={state.isGraduated ? 'Soft cap met' : `${fmtNum(fundingPct, 1)}% of goal`}
+          sub={state.isGraduated ? 'Soft cap met' : `${fundingPct < 1 ? fundingPct.toFixed(2) : fmtNum(fundingPct, 1)}% of goal`}
         />
         <Stat
           label="Total Bids"
           value={state.bids.length.toLocaleString()}
+          sub={`${activeBids} active`}
         />
         <Stat
           label="Demand Above Clearing"
-          value={fmtNum(demandAboveClearing)}
-          sub="Active demand (Q96)"
+          value={`${fmtNum(demandAboveClearing)} iKAS`}
+          sub={`Avg max price: ${fmtPrice(avgPrice)} iKAS`}
         />
         <Stat
           label="Total Supply (Auction)"
@@ -192,6 +201,26 @@ export default function StatsGrid({ params, state, blockNumber, kasPrice }: Prop
           label="End Block"
           value={params.endBlock.toLocaleString()}
           sub={blocksToEnd > 0 ? `${fmtBlocks(blocksToEnd)} remaining` : 'Auction ended'}
+        />
+        <Stat
+          label="Claim Block"
+          value={params.claimBlock.toLocaleString()}
+          sub={blocksToClaim > 0 ? `${fmtBlocks(blocksToClaim)} until claim` : 'Claims open'}
+        />
+        <Stat
+          label="Unique Bidders"
+          value={uniqueBidders.toLocaleString()}
+          sub={`${(state.bids.length / uniqueBidders).toFixed(1)} bids per bidder`}
+        />
+        <Stat
+          label="Currency"
+          value={params.currency === '0x0000000000000000000000000000000000000000' ? 'iKAS (Native)' : 'ERC20'}
+          sub="Payment currency"
+        />
+        <Stat
+          label="Avg Deposit"
+          value={`${fmtNum(currencyRaised / state.bids.length, 2)} iKAS`}
+          sub="Per bid"
         />
       </div>
 
