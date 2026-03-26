@@ -22,7 +22,7 @@ function getPhase(
 
 function Stat({ label, value, sub, href }: { label: string; value: string; sub?: string; href?: string }) {
   const content = (
-    <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 hover:border-gray-700 transition-colors">
+    <div className="h-full rounded-xl bg-gray-900 border border-gray-800 p-4 hover:border-gray-700 transition-colors">
       <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{label}</p>
       <p className="text-lg font-semibold font-mono truncate">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1 truncate">{sub}</p>}
