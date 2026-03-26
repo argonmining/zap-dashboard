@@ -28,7 +28,7 @@ function Stat({ label, value, sub, href }: { label: string; value: string; sub?:
       {sub && <p className="text-xs text-gray-500 mt-1 truncate">{sub}</p>}
     </div>
   );
-  if (href) return <a href={href} target="_blank" rel="noopener noreferrer">{content}</a>;
+  if (href) return <a href={href} target="_blank" rel="noopener noreferrer" className="block h-full">{content}</a>;
   return content;
 }
 
