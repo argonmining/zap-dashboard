@@ -218,7 +218,7 @@ export default function BidTable({ bids, clearingPrice }: Props) {
                   <td className="px-3 py-2 text-right font-mono">
                     {fmtNum(deposit, 2)}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-green-400">
+                  <td className="px-3 py-2 text-right font-mono text-orange-400">
                     {fmtNum(tokens, 2)}
                   </td>
                   <td className="px-3 py-2 text-right font-mono text-orange-400">
